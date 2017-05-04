@@ -1,0 +1,62 @@
+# A FUNction for checking the accuracy rate of clustered points
+# arguments are indices = the predicted cluster labels 
+# and trueLabels = the true labels
+#
+maximum_number_of_correctly_classified_points <-  function(num){
+  n <- nrow(num)
+  m<- ncol(num)
+  index_row <- rep(FALSE,n)
+  index_column <- rep(FALSE,m)
+  assignment <- rep(-1,n)
+  count <- 0
+  while(count <= n){
+    num_temp = num[index_row==0,index_column==0]
+    if (sum(num_temp)==0){
+      break
+    }
+    rows <- (1:n)[index_row ==0]
+    columns <- (1:m)[index_column == 0]
+    winners = find_clear_winners(num_temp,rows,columns)
+    assignment[winners[[1]]] = winners[[2]]
+    index_column <- index_column | (1:m %in% winners[[2]])
+    index_row <- index_row |  (1:n %in% winners[[1]])
+    if(length(columns) ==0){
+      break
+    }
+    count <- count + 1
+  }
+  n <- sum(diag(num[(1:n)[assignment!=-1],assignment[assignment!=-1]]))
+  return(list(n,assignment))
+}
+  
+find_clear_winners<- function(num,rows,columns){
+  max_row <- max.col(num)
+  max_col <- max.col(t(num[, max_row]))
+  index <- max_col == 1:nrow(num)
+  row_winners <-rows[(1:nrow(num))[index]]
+  column_winners <- columns[max_row[index]]
+  return(list(row_winners,column_winners))
+}
+  
+clustercheck2<-function(indices,trueLabels):
+  K <- length(unique(trueLabels))
+  planeSizes <-rep(0,K)
+  k <- 1
+  for(m in unique(trueLabels)){
+    planeSizes[k] = sum(trueLabels == m)
+    k = k+1
+  }
+  
+  num <- matrix(0,nrow=K,ncol=length(unique(indices)))
+  k<- 1
+  for(n in unique(trueLabels)){
+    j=1
+    for(m in sort(unique(indices))){
+      num[k,j] = sum((indices==m)*(trueLabels==n))
+      j=j+1
+    }
+    k = k+1
+  }
+  results = maximum_number_of_correctly_classified_points(num)
+  p = results[[1]]/sum(planeSizes)
+  return(list(accuracy = p, assignments= results[[2]]))
