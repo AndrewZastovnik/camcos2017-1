@@ -3,9 +3,7 @@
 ### Mandatory:
 # data: any sparse or dense matrix
 # weightfunction: "beta" "step" "linear" "IDF" "IDF^2"
-# sparseinput: is your data in sparse (long) format? (Long format = Nx3 list of nonzero entries)
-    # must clarify TRUE or FALSE
-
+# defualts to "IDF"
 
 ### Optional:
 # binary = do you want to convert your data to binary?
