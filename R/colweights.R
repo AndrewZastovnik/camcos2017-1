@@ -22,7 +22,7 @@
 ### NOTE: this function assumes that multiplying by sqrt(weight) is appropriate for similarity calculation
 
 
-colweights <- function (data, weightfunction='IDF',binary=T,...) {
+colweights <- function (data, weightfunction='IDF',binary=True,warn=False,...) {
     par <- list(...)
     sparseinput <-is(data, 'sparseMatrix')
     require(Matrix)
@@ -67,7 +67,7 @@ colweights <- function (data, weightfunction='IDF',binary=T,...) {
     
     rowsum <- rowSums(data)
     
-    if(min(rowsum) <= 0) {  # some rows could lose all nonzero entries when you trim columns
+    if(min(rowsum) <= 0 & warn) {  # some rows could lose all nonzero entries when you trim columns
         #What is this for? How do I fix this?
         resp <- readline(prompt="One or more rows has zero weight. \n 
             Make sure that you fix this before continuing. \n 
