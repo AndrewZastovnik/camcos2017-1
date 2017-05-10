@@ -3,9 +3,8 @@
 #' In the results table, true clusters are the rows, guessed clusters are the
 #' columns
 #'
-#' @param cluster Integer vector. Labels from clustering
-#' @param Labels Integer vector. Ground truth labels.
-#' @param k Integer. Number of clusters.
+#' @param indices: Labels from clustering
+#' @param trueLabels: Ground truth labels.
 #'
 #' @return List of 3. Confusion matrix, label mapping, accuracy.
 #' @export
