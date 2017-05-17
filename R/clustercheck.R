@@ -3,77 +3,88 @@
 #' In the results table, true clusters are the rows, guessed clusters are the
 #' columns
 #'
-#' @param cluster Integer vector. Labels from clustering
-#' @param Labels Integer vector. Ground truth labels.
-#' @param k Integer. Number of clusters.
+#' @param indices: Labels from clustering
+#' @param trueLabels: Ground truth labels.
 #'
 #' @return List of 3. Confusion matrix, label mapping, accuracy.
 #' @export
-#'
-#' @examples
-#' # Example of a results matrix that FAILS clustercheck
-#' # Cluster assignment of "true cluster #3" is split too evenly
-#' results <- matrix(c(15,31,4,452,5,0,1,384,1,20,1,3,34,141,56,53,289,357,0,
-#'   2,282,6,160,5,527,32,48,51,9,6,4,2,203,0,0,5), nrow = 6)
-clustercheck <- function (cluster, Labels, k) {
-
-
-  comp <- cbind(cluster, Labels) # nx2 matrix of cluster assignments and true group membership
-
-  # results matrix
-
-  results <- matrix( rep(0,k^2), nrow = k)
-
-
-  # results matrix: rows = true group, columns = assigned cluster
-
-  for (row in 1:nrow(comp)){
-
-      results[comp[row,2], comp[row,1]] <- results[comp[row,2], comp[row,1]] + 1
-
+clustercheck<-function(indices,trueLabels){
+  # find the true cluster sizes
+  K <- length(unique(trueLabels))
+  planeSizes <-rep(0,K)
+  k <- 1
+  for(m in unique(trueLabels)){
+    planeSizes[k] = sum(trueLabels == m)
+    k = k+1
   }
-
-
-  # calculate percentage distribution of each true group
-
-  percent.cluster <- t(apply(results, 1, function(x) x/sum(x)))
-
-  assignment <- matrix( rep(0,k), nrow = k)
-
-
-  # assign the most-correct true group to that cluster, and continue
-
-  for (index in 1:k) {
-
-      test <- which(percent.cluster == max(percent.cluster), arr.ind = TRUE)
-
-      assignment[ test[1],1 ] <- test[2]
-
-      percent.cluster[test[1],] <- 0   # remove that row (true group) from consideration
-
-      percent.cluster[,test[2]] <- 0   # remove that column (cluster) from consideration
-
+  # num is a little confusing... matrix!
+  num <- matrix(0,nrow=K,ncol=length(unique(indices)))
+  k<- 1
+  for(n in unique(trueLabels)){
+    j=1
+    for(m in sort(unique(indices))){
+      # fill the confusion matrix
+      num[k,j] = sum((indices==m)*(trueLabels==n))
+      j=j+1
+    }
+    k = k+1
   }
+  
+  results = maximum_number_of_correctly_classified_points(num)
+  p = results[[1]]/sum(planeSizes)
+  return(list(confusion_matrix=num,
+              accuracy = p, 
+              assignments= results[[2]]))
+}
 
-
-  # calculate percentage assigned
-
-  correct <- 0
-  for (i in 1:nrow(assignment)){
-
-      correct <- correct + results[i,assignment[i,1]]
-
+maximum_number_of_correctly_classified_points <-  function(num){
+  # this function finds optimal pairing of clusters and classes
+  n <- nrow(num)
+  m<- ncol(num)
+  index_row <- rep(FALSE,n)
+  index_column <- rep(FALSE,m)
+  # assignments of -1 mean that cluster was given no class
+  assignment <- rep(-1,n)
+  count <- 0
+  while(count <= n){
+    # make a temp confusion matrix the we will remove obviously optimal
+    # combinations of rows and columns
+    num_temp = as.matrix(num[index_row==0,index_column==0])
+    if (sum(num_temp)==0){
+      # end the the loop if there are no nonzero entries left in the 
+      #confusion matrix
+      break
+    }
+    # the rows of the original confusion matrix that haven't been 
+    # assigned yet
+    rows <- (1:n)[index_row ==0]
+    # the columns that haven't been assigned
+    columns <- (1:m)[index_column == 0]
+    # entries of our confusion matrix that are the max in their
+    # row and column winners[[1]] is rows winners[[2]] are the columns
+    winners = find_clear_winners(num_temp,rows,columns)
+    assignment[winners[[1]]] = winners[[2]]
+    # make sure we remove the winners from the matrix next time
+    index_column <- index_column | (1:m %in% winners[[2]])
+    index_row <- index_row |  (1:n %in% winners[[1]])
+    if(length(columns) ==0){
+      # end if there are no more clusters to assign
+      # should be handeled by the other check but whatevere
+      break
+    }
+    count <- count + 1
   }
+  n <- sum(diag(num[(1:n)[assignment!=-1],assignment[assignment!=-1]]))
+  return(list(assignment,n))
+}
 
-  percent.score <- correct / sum(results)
-
-
-  # clean up the assignment matrix
-
-  assignment <- cbind( seq(1,k), assignment[,1])
-  colnames(assignment) <- c("True Cluster", "Assigned Cluster")
-
-
-  return(list(results, assignment, percent.score))
-
+find_clear_winners<- function(num,rows,columns){
+  # finds the row and column of enties that are 
+  # the largest entries in the 
+  max_row <- max.col(num)
+  max_col <- max.col(t(num[, max_row]))
+  index <- max_col == 1:nrow(num)
+  row_winners <-rows[(1:nrow(num))[index]]
+  column_winners <- columns[max_row[index]]
+  return(list(row_winners,column_winners))
 }
